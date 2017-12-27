@@ -237,11 +237,14 @@ class Test_advanded_lane_fnder_tests(unittest.TestCase):
             image = plt.imread(fname)
             if image.shape[2] == 4:
                 image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+            
+            line = {'left':Lines(n_iter=7), 'right':Lines(n_iter=7)}
+            fail = {'left':2, 'right':2}
             final, line, fail = lane_lines.get_image_with_lanes(image, line, fail, 15, True, True )
             file_name = self.get_output_file("lane_line_test", fname)
             plt.imsave(file_name, final, cmap = "gray")
         
-        images = glob.glob(glob.glob('test_images/test*.jpg'))
+        images = glob.glob('test_images/test*.jpg')
         for idx, fname in enumerate(images):
             file = self.get_output_file("lane_line_test", fname)
             
@@ -251,10 +254,10 @@ class Test_advanded_lane_fnder_tests(unittest.TestCase):
                 file_missing = True
     
     
-            if file_missing:
-                self.fail("Images not created")
-            else:
-                pass
+        if file_missing:
+            self.fail("Images not created")
+        else:
+            pass
 
     def plot_image(self, file_name, image) :
         plt.figure(figsize=(10,10)) #

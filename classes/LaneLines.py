@@ -110,21 +110,6 @@ class LaneLines(object):
         
         # Step through the windows one by one
         for window in range(num_windows):
-            
-            # Identify window boundaries in x and y (and right and left)
-            Y1 = height - (window+1)*window_height
-            Y2 = height - window*window_height
-            X1 = {side : self.x_current[side]-self.margin[side] for side in ['left','right']} 
-            X2 = {side : self.x_current[side]+self.margin[side] for side in ['left','right']} 
-            if debug :
-                print("-----",window, X1, X2, Y1, Y2)
-            
-            found, good_pixels_x, good_pixels_y = self.window_analysis(X1,Y1,X2,Y2)
-            if not self.check_lanes(min_lane_gap=350, img_range=(-50,width+50)) : 
-                break
-            #x_current = {'left' : self.x_current['left'], 'right':self.x_current['left']}
-            lane_gap = self.lane_gap
-            
                 
             # final window refinement with updated centers and margins
             Y1 = height - (window+1)*window_height
@@ -151,18 +136,6 @@ class LaneLines(object):
                     cv2.rectangle(out_img_B,(X1[side],Y1) ,(X2[side],Y2) ,(0,255,i*255), 2) 
                     # Draw good pixels 
                     out_img_C[good_pixels_y[side], good_pixels_x[side],i] = 255 
-            
-                # decide window centers based on previous windows 
-                #momentum[side] = 0
-                last_update[side] += 1
-                if x_prev[side] :
-                    momentum[side] = np.int(momentum[side]) 
-                    if found[side] :
-                        momentum[side] += np.int(0.5*(self.x_current[side] - x_prev[side])/(last_update[side]))
-                if found[side] : 
-                    x_prev[side] = self.x_current[side]
-                    last_update[side] = 0
-                self.x_current[side] += momentum[side]
         
         for side in ['left','right'] :
             if self.good_pixels_x[side] :
@@ -195,19 +168,8 @@ class LaneLines(object):
         imgC = np.zeros_like(img)
         main_img = np.zeros_like(img).astype(np.uint8) #blank image like img
 
-        if self.line['left'].counter%10==0 or self.line['right'].counter%10==0 or \
-            self.line['left'].counter<10 or self.line['right'].counter<10 or \
-            self.fail['left']>=2 or self.fail['right']>=2 :
-            #We are just starting or 10 lines or we failed to find lines more than 2 X
-            imgA,imgB,imgC = self.find_lines_in_windows(image, nb_windows, visualize, debug) # find the lines using a window search 
-        else :
-            #Lest try and do a target search for the lines
-            fit = {}
-            for side in ['left','right'] :
-                #print("using target ", side, self.line[side].avg_fit )
-                fit[side] = self.line[side].avg_fit
-            imgA,imgB,imgC = self.target_search(fit) 
-    
+        imgA,imgB,imgC = self.find_lines_in_windows(image, nb_windows, visualize, debug) # find the lines using a window search 
+        
         fit = {'left':None, 'right':None}    
         sides = ['left','right']
     
@@ -252,7 +214,7 @@ class LaneLines(object):
         base_gap = (self.line['left'].base_gap(self.line['right']))
         center_pos = (self.line['left'].line_base_pos + self.line['right'].line_base_pos)/2
 
-        main_img = self.plot_lane(fit)
+        main_img = self.plot_lane(fit) #This is where we plot the lane lines on the image
         filename = "file{}.jpg".format(self.counter)
         if debug:         
             img_A = cv2.resize(imgA,None, fx=0.32, fy=0.34, interpolation=cv2.INTER_AREA)
@@ -319,32 +281,6 @@ class LaneLines(object):
  
         return final, self.line, self.fail
         
-    def get_curvature_radius(self, x_values, num_rows):
-        ym_per_pix = 30 / 720 # meters per pixel in y dimension
-        xm_per_pix = 3.7 / 700 # meters per pixel in x dimension
-        # If no pixels were found return None
-        y_points = np.linspace(0, num_rows - 1, num_rows)
-        y_eval = np.max(y_points)
-        
-        # Fit new polynomials to x,y in world space
-        fit_cr = np.polyfit(y_points * ym_per_pix, x_values * xm_per_pix, 2)
-        curve_rad = ((1 + (2 * fit_cr[0] * y_eval * ym_per_pix + fit_cr[1]) ** 2) ** 1.5) / np.absolute(2 * fit_cr[0])
-        return curve_rad
-   
-    def get_lane_lines_base(self, image):
-        """
-            Input: image which is a binary thresholded image and perspective transformed
-            Returns: Coordinates of the base of the lane self.line (left, right)
-        """
-        histogram = np.sum(image[int(image.shape[0] / 2):,:], axis=0)
-        midpoint = np.int(histogram.shape[0] / 2)
-        
-        
-        leftx_base = np.argmax(histogram[:midpoint])
-        rightx_base = np.argmax(histogram[midpoint:]) + midpoint
-        
-        return [(leftx_base, image.shape[0]),  (rightx_base, image.shape[0])]
-
     def get_good_pixels(self, roi, min_pix=100, max_pix=10000, window_search=True, debug=False) :
         nb_pixels, x_mean, x_stdev = {},{},{}
         for channel in self.binary :
@@ -444,33 +380,8 @@ class LaneLines(object):
         elif self.x_current['left']<img_range[0] or self.x_current['right']>img_range[1] : return False
         else : return True
    
-    def curve_fit(self, poly_order=2):
-        # fit data
-        fit={'left':None, 'right':None}
-        
-        for side in ['left','right'] :
-            if self.good_pixels_x[side] is not None :
-                fit[side]  = np.polyfit(self.good_pixels_y[side], self.good_pixels_x[side], poly_order)
-        self.fit = fit
-        return poly_order, fit
-    
-    def radius_of_curvature(self, fit, y) :
-        return ((1 + (2*fit[0]*y + fit[1])**2)**1.5) / np.absolute(2*fit[0])
-    
-    def plot_curve_fits(self) :
-        poly_order, fit = self.curve_fit()
-        height = self.dims[1]
-        y = np.linspace(0, height-1, height)
-        x_fit = {'left':None, 'right':None}
-        for side in ['left','right'] :
-            if fit[side] is not None :
-                x_fit[side] = fit[side][poly_order]
-                for i in range(poly_order) :
-                    x_fit[side] += fit[side][i]*y**(poly_order-i)
-        return x_fit,y
-    
     def plot_lane(self, fit, poly_order=2) :
-        #poly_order, fit = self.curve_fit()
+        
         width,height = self.dims
         y = np.linspace(0, height-1, height)
         x_fit = {'left':None, 'right':None}
@@ -497,65 +408,7 @@ class LaneLines(object):
             return out_img
         else :
             return self.img
-        
-    def target_search(self, fit, poly_order=2, margin=80, visualize=True) :
-        # get channels and warp them
-        self.binary = Thresholding.split_channels(self.img)
-        self.binary = {k: self.transformation.transform_perspective(v) for k, v in self.binary.items()}
-        # group A consists of all self.line edges and white color 
-        group_A = np.dstack((self.binary['edge_pos'], self.binary['edge_neg'], self.binary['white_tight']))
-        # group B consists of yellow edges and yellow color
-        group_B = np.dstack((self.binary['yellow_edge_pos'], self.binary['yellow_edge_neg'], self.binary['yellow']))
-        
-        height,width = group_A.shape[:2]
-        self.dims = (width,height)
-        
-        if visualize :
-            out_img_A = np.copy(group_A)*255
-            out_img_B = np.copy(group_B)*255
-            out_img_C = np.zeros_like(out_img_A)
-            margins_img = np.zeros_like(out_img_A)
-            # search area for left and right lanes
-            y = np.linspace(0, height-1, height)
-            x_fit = {'left':[-margin,margin], 'right':[-margin,margin]}
-            for side in ['left','right'] :
-                for i in range(poly_order+1) :
-                    x_fit[side][0] += fit[side][i]*y**(poly_order-i)
-                    x_fit[side][1] += fit[side][i]*y**(poly_order-i)
-                pts_x = np.hstack((x_fit[side][0],x_fit[side][1][::-1]))
-                pts_y = np.hstack((y,y[::-1]))
-                pts = np.vstack((pts_x, pts_y)).T
-                cv2.fillPoly(margins_img, np.int32([pts]), (0,0, 255))
-                
-        
-        self.found         = {'left':False,'right':False}
-        self.good_pixels_x = {'left':None, 'right':None}
-        self.good_pixels_y = {'left':None, 'right':None}
-        
-        self.nonzero_x, self.nonzero_y = self.get_nonzero_pixels()
-        
-        for i,side in enumerate(['left','right']) :
-            # define region of interest
-            roi={}
-            for channel in self.binary :
-                nonzero_x, nonzero_y = np.copy(self.nonzero_x[channel]), np.copy(self.nonzero_y[channel])
-                roi[channel] = ((nonzero_x > (fit[side][0]*(nonzero_y**2) + fit[side][1]*nonzero_y 
-                                + fit[side][2] - margin)) & (nonzero_x < (fit[side][0]*(nonzero_y**2) 
-                                + fit[side][1]*nonzero_y + fit[side][2] + margin))) 
-
-            self.found[side], self.good_pixels_x[side], self.good_pixels_y[side] = \
-                    self.get_good_pixels(roi, window_search=False) 
-                
-            if visualize :
-                if self.found[side] :
-                    out_img_C[self.good_pixels_y[side], self.good_pixels_x[side],i] = 255        
-            
-        if visualize :
-            #out_img_A = cv2.addWeighted(out_img_A, 1, margins_img, 0.1, 0)
-            #out_img_B = cv2.addWeighted(out_img_B, 1, margins_img, 0.1, 0)
-            out_img_C = cv2.addWeighted(out_img_C, 1, margins_img, 0.6, 0)
-            return out_img_A.astype(np.uint8), out_img_B.astype(np.uint8), out_img_C.astype(np.uint8)
-
+    
     def plot_image(self, prefix, output_filename, img):
          out_file = self.get_output_file(prefix, output_filename) 
          mpimg.imsave(out_file, img, cmap = "gray")
