@@ -1,0 +1,65 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>9dbc20e2-33c4-41ce-8d4e-c14ada9c07a4</ProjectGuid>
+    <ProjectHome>
+    </ProjectHome>
+    <StartupFile>Advanced_Lane_Lines.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>Advanced_Lane_Lines</Name>
+    <RootNamespace>Udacity.Advanced_Lane_Lines</RootNamespace>
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <InterpreterId>Global|VisualStudio|TensorFlow</InterpreterId>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Advanced_Lane_Lines.py" />
+    <Compile Include="classes\LaneLines.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="classes\Lines.py" />
+    <Compile Include="classes\Thresholding.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="classes\Transformation.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="tests\advanded_lane_fnder_tests.py">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="camera_cal\" />
+    <Folder Include="data\" />
+    <Folder Include="classes\" />
+    <Folder Include="tests\" />
+    <Folder Include="test_images\" />
+    <Folder Include="output_images\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="Global|VisualStudio|TensorFlow" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="README.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>
