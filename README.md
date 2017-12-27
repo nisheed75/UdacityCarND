@@ -292,7 +292,7 @@ def __init__(self, cal, plot, image):
         #image = plt.imread(image)
         self.get_transformation_matrix(image, plot=plot)
 ```
-1. Once I have the M and M_Inv vlaues calculated I can use the following code to chnage the prespective:
+1. Once I have the M and M_Inv values calculated I can use the following code to chnage the prespective:
 ``` python 
 def transform_perspective(self, image):
         x = cv2.warpPerspective(image, self.M, (image.shape[1], image.shape[0]), flags=cv2.INTER_LINEAR)
